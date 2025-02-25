@@ -1,13 +1,10 @@
-﻿using Login_API.Business.Interfaces;
+﻿using Login_API.Business;
+using Login_API.Business.Interfaces;
 using Login_API.Data;
 using Login_API.Data.Models;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
+using System.Threading.Tasks;
 
 namespace LoginAPI.API.Controllers
 {
@@ -16,33 +13,35 @@ namespace LoginAPI.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly UserDbContext _context;
-        private readonly IConfiguration _configuration;
+        private readonly JwtTokenService _jwtTokenService;
 
-        public AuthController(UserDbContext context, IConfiguration configuration)
+        public AuthController(UserDbContext context, JwtTokenService jwtTokenService)
         {
             _context = context;
-            _configuration = configuration;
+            _jwtTokenService = jwtTokenService;
         }
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState); // This will return detailed validation errors
-            }
-
             if (_context.Users.Any(u => u.Email == model.Email))
             {
                 return BadRequest("User already exists");
             }
 
-           
+            var user = new User
+            {
+                FirstName = model.FirstName,
+                LastName = model.LastName,
+                Email = model.Email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password)
+            };
 
-            return Ok(new { message = "User registered successfully" });
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            return Ok("User registered successfully");
         }
-
-
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
@@ -53,44 +52,8 @@ namespace LoginAPI.API.Controllers
                 return Unauthorized("Invalid credentials");
             }
 
-            var token = GenerateJwtToken(user);
-            return Ok(new { token });
-        }
-
-        private string GenerateJwtToken(User user)
-        {
-            // Read JWT settings from configuration
-            var jwtKey = _configuration["JwtSettings:Key"];
-            var jwtIssuer = _configuration["JwtSettings:Issuer"];
-            var jwtAudience = _configuration["JwtSettings:Audience"];
-
-            // Ensure none of the settings are missing
-            if (string.IsNullOrEmpty(jwtKey) || string.IsNullOrEmpty(jwtIssuer) || string.IsNullOrEmpty(jwtAudience))
-            {
-                throw new Exception("❌ JWT settings are missing in appsettings.json! Check 'JwtSettings'.");
-            }
-
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
-            var claims = new[]
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim("userId", user.Id.ToString()),  // Include user ID
-                new Claim("firstName", user.FirstName),
-                new Claim("lastName", user.LastName)
-            };
-
-            var token = new JwtSecurityToken(
-                issuer: jwtIssuer,
-                audience: jwtAudience,
-                claims: claims,
-                expires: DateTime.UtcNow.AddHours(2),
-                signingCredentials: credentials
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            var token = _jwtTokenService.GenerateToken(user.Id,user.Email);
+            return Ok(new { Token = token });
         }
     }
 }

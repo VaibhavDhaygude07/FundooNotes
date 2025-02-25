@@ -22,7 +22,7 @@ namespace FundooNotes.Data.Repositories
     {
         return await _context.Notes.Where(n => n.UserId == userId).ToListAsync();
     }
-
+        
     public async Task<Note> GetNoteById(int noteId, int userId)
     {
         return await _context.Notes.FirstOrDefaultAsync(n => n.NoteId == noteId && n.UserId == userId);
@@ -51,4 +51,5 @@ namespace FundooNotes.Data.Repositories
         return false;
     }
     }
+
 }
