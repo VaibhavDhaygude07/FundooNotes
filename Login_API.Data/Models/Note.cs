@@ -27,5 +27,10 @@ namespace FundooNotes.Data.Models
         // Foreign Key Relationship with User
         [ForeignKey("UserId")]
         public User User { get; set; }
+
+        public bool IsDeleted { get; set; } = false;
+    
+        public bool isArchive { get; set; }
+        public bool IsTrashed { get; internal set; }
     }
 }

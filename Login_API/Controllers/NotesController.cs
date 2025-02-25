@@ -1,4 +1,5 @@
-﻿using FundooNotes.Business.Interfaces;
+﻿using FundooNotes.API.Controllers;
+using FundooNotes.Business.Interfaces;
 using FundooNotes.Data.Models;
 using Login_API.Data.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -26,7 +27,7 @@ namespace FundooNotes.API.Controllers
         public async Task<IActionResult> GetAllNotes()
         {
             var UserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var notes = await _noteService.GetAllNotes(UserId);
+            var notes = await _noteService.GetAllActiveNotes(UserId);//GetAllNotes(UserId);
             return Ok(notes);
         }
 
@@ -74,6 +75,41 @@ namespace FundooNotes.API.Controllers
             return result ? Ok("Note deleted successfully!") : BadRequest("Failed to delete note");
         }
 
-       
+        [HttpPut("Archive/{noteId}")]
+        public async Task<IActionResult> ToggleArchive(int noteId)
+        {
+            var UserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var note = await _noteService.GetNoteById(noteId, UserId);
+            if (note == null) return NotFound("Note not found");
+
+            if (note.IsDeleted)
+            {
+                return BadRequest(new { success = false, Message = "Note cannot be Archived: Note is in Trash" });
+            }
+
+            var result = await _noteService.ToggleArchive(noteId, UserId);
+            if (!result) return BadRequest("Failed to toggle archive status");
+
+            note = await _noteService.GetNoteById(noteId, UserId);
+            return Ok(new { success = true, Message = "Note Archive Toggled Successfully", Data = $"Note Archived Status: {note.isArchive}" });
+        }
+
+        [HttpPut("Trash/{noteId}")]
+       public async Task<IActionResult> ToggleNoteTrash(int noteId)
+        {
+            var UserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var note = await _noteService.GetNoteById(noteId, UserId);
+            if (note == null) return NotFound("Note not found");
+            var result = await _noteService.ToggleNoteTrash(noteId, UserId);
+            if (!result) return BadRequest("Failed to toggle trash status");
+            note = await _noteService.GetNoteById(noteId, UserId);
+            return Ok(new { success = true, Message = "Note Trash Toggled Successfully", Data = $"Note Trash Status: {note.IsTrashed}" });
+        }
+
+
+
+
     }
+   
 }
+
