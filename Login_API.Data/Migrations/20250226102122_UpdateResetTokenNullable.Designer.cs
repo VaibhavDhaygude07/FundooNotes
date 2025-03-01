@@ -4,6 +4,7 @@ using Login_API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FundooNotes.Data.Migrations
 {
     [DbContext(typeof(UserDbContext))]
-    partial class UserDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250226102122_UpdateResetTokenNullable")]
+    partial class UpdateResetTokenNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,43 +24,7 @@ namespace FundooNotes.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
 
-            modelBuilder.Entity("FundooNotes.Data.Entity.Collaborator", b =>
-                {
-                    b.Property<string>("Email")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Email");
-
-                    b.ToTable("Collaborators");
-                });
-
-            modelBuilder.Entity("FundooNotes.Data.Entity.Label", b =>
-                {
-                    b.Property<int>("LabelId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LabelId"), 1L, 1);
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("LabelId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Labels");
-                });
-
-            modelBuilder.Entity("FundooNotes.Data.Entity.Note", b =>
+            modelBuilder.Entity("FundooNotes.Data.Models.Note", b =>
                 {
                     b.Property<int>("NoteId")
                         .ValueGeneratedOnAdd()
@@ -100,7 +66,7 @@ namespace FundooNotes.Data.Migrations
                     b.ToTable("Notes");
                 });
 
-            modelBuilder.Entity("FundooNotes.Data.Entity.User", b =>
+            modelBuilder.Entity("Login_API.Data.Models.User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -135,20 +101,9 @@ namespace FundooNotes.Data.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("FundooNotes.Data.Entity.Label", b =>
+            modelBuilder.Entity("FundooNotes.Data.Models.Note", b =>
                 {
-                    b.HasOne("FundooNotes.Data.Entity.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("FundooNotes.Data.Entity.Note", b =>
-                {
-                    b.HasOne("FundooNotes.Data.Entity.User", "User")
+                    b.HasOne("Login_API.Data.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)

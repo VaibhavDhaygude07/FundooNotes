@@ -8,30 +8,47 @@ using Login_API.Data;
 using Login_API.Data.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using StackExchange.Redis;
+using System.Net;
+using System.Net.Mail;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+//  Ensure JWT Key is not null
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrEmpty(jwtKey))
+{
+    throw new ArgumentNullException("Jwt:Key is missing in configuration!");
+}
 
-// Configure Database Connection
+// Register Redis connection
+builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(
+    builder.Configuration.GetSection("Redis:ConnectionString").Value));
+
+var key = Encoding.UTF8.GetBytes(jwtKey);
+
+// 🔹 Configure Database Connection
 builder.Services.AddDbContext<UserDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Add Dependency Injection for Repositories & Services
+// 🔹 Add Dependency Injection for Repositories & Services
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
-
-// Register Notes-related services
 builder.Services.AddScoped<INoteRepository, NoteRepository>();
 builder.Services.AddScoped<INoteService, NoteService>();
-
-// Register JwtTokenService
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddSingleton<IEmailService, EmailService>();
 
-// Configure Authentication & JWT
-var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]);
+// ✅ Register Label Repository & Service
+builder.Services.AddScoped<ILabelRepository, LabelRepository>();
+builder.Services.AddScoped<ILabelService, LabelService>();
+builder.Services.AddScoped<ICollaboratorRepository, CollaboratorRepository>();
+
+// 🔹 Configure Authentication & JWT
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -45,6 +62,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(key)
         };
+
+        // ✅ Handle Unauthorized Responses
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = context =>
+            {
+                context.HandleResponse();
+                context.Response.StatusCode = 401;
+                context.Response.ContentType = "application/json";
+                return context.Response.WriteAsync("{\"error\": \"Unauthorized - Invalid or missing token.\"}");
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -52,12 +81,10 @@ builder.Services.AddAuthorization();
 // 🔹 Add Controllers
 builder.Services.AddControllers();
 
-// Add Swagger with JWT support
 // 🔹 Configure Swagger with JWT Authentication
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    //Add JWT Authentication to Swagger
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -84,18 +111,12 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-
-
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
-
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -1,4 +1,5 @@
-﻿using FundooNotes.Data.Models;
+﻿using FundooNotes.Data.Entity;
+using FundooNotes.Data.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +12,8 @@ namespace FundooNotes.Data.Repositories
     public interface INoteRepository
     {
         Task<IEnumerable<Note>> GetAllNotes(int userId);
-        Task<Note> GetNoteById(int noteId, int userId);
+        Task<Note?> GetNoteById(int noteId, int userId);
+
         Task<bool> CreateNote(Note note);
         Task<bool> UpdateNote(Note note);
         Task<bool> DeleteNote(int noteId, int userId);

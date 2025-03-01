@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Security.Claims;
+using FundooNotes.Data.Entity;
 
 namespace FundooNotes.API.Controllers
 {
@@ -75,7 +76,7 @@ namespace FundooNotes.API.Controllers
             return result ? Ok("Note deleted successfully!") : BadRequest("Failed to delete note");
         }
 
-        [HttpPut("Archive/{noteId}")]
+        [HttpPut("{noteId}/Archive")]
         public async Task<IActionResult> ToggleArchive(int noteId)
         {
             var UserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
@@ -94,7 +95,7 @@ namespace FundooNotes.API.Controllers
             return Ok(new { success = true, Message = "Note Archive Toggled Successfully", Data = $"Note Archived Status: {note.isArchive}" });
         }
 
-        [HttpPut("Trash/{noteId}")]
+        [HttpPut("{noteId}/Trash")]
        public async Task<IActionResult> ToggleNoteTrash(int noteId)
         {
             var UserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));

@@ -1,11 +1,10 @@
-﻿using Login_API.Data.Models;
-using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace FundooNotes.Data.Models
+
+namespace ModelLayer.Models
 {
-    public class Note
+    public class NoteResponseModel
     {
         [Key]
         public int NoteId { get; set; }
@@ -23,13 +22,8 @@ namespace FundooNotes.Data.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
-        // Foreign Key Relationship with User
-        [ForeignKey("UserId")]
-        public User User { get; set; }
-
         public bool IsDeleted { get; set; } = false;
-    
+
         public bool isArchive { get; set; }
         public bool IsTrashed { get; internal set; }
     }

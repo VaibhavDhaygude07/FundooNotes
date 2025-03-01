@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FundooNotes.Data.Models;
 using FundooNotes.Data.Repositories;
+using FundooNotes.Data.Entity;
 
 namespace FundooNotes.Business.Services
 {

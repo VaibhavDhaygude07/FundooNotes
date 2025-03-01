@@ -5,7 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Login_API.Data.Models
+namespace FundooNotes.Data.Entity
+
 {
     public class User
     {
@@ -23,5 +24,9 @@ namespace Login_API.Data.Models
 
         [Required]
         public string PasswordHash { get; set; }
+
+        [MaxLength]
+        public string? ResetToken { get; set; }  // Token for password reset
+        public DateTime? ResetTokenExpiry { get; set; }
     }
 }

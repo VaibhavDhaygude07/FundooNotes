@@ -1,4 +1,5 @@
 ﻿using BCrypt.Net;
+using FundooNotes.Data.Entity;
 using Login_API.Business.Interfaces;
 using Login_API.Data.Models;
 using Login_API.Data.Repositories;

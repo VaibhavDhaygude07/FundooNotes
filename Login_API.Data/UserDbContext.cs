@@ -1,11 +1,6 @@
-﻿using FundooNotes.Data.Models;
-using Login_API.Data.Models;
+﻿using FundooNotes.Data.Entity;
+
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Login_API.Data
 {
@@ -14,5 +9,8 @@ namespace Login_API.Data
         public UserDbContext(DbContextOptions<UserDbContext> options) : base(options) { }
         public DbSet<User> Users { get; set; }
         public DbSet<Note> Notes { get; set; }
+        public DbSet<Label> Labels { get; set; }
+        public DbSet<Collaborator> Collaborators { get; set; }
+
     }
 }

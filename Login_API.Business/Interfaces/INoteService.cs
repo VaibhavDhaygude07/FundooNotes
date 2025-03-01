@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FundooNotes.Data.Entity;
 using FundooNotes.Data.Models;
 
 namespace FundooNotes.Business.Interfaces
@@ -10,7 +11,7 @@ namespace FundooNotes.Business.Interfaces
     public interface INoteService
     {
 
-       // Task<IEnumerable<Note>> GetAllNotes(int userId);
+       
         Task<IEnumerable<Note>> GetAllActiveNotes(int userId);
 
         Task<Note> GetNoteById(int noteId, int userId);

@@ -1,21 +1,25 @@
-﻿using Login_API.Data;
+﻿using FundooNotes.Data.Entity;
+using FundooNotes.Data.Models;
+using Login_API.Data;
+using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using FundooNotes.Data.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace FundooNotes.Data.Repositories
 {
     public class NoteRepository : INoteRepository
     {
         private readonly UserDbContext _context;
+        private readonly UserDbContext _redisDb;
 
-        public NoteRepository(UserDbContext context)
+        public NoteRepository(UserDbContext context, UserDbContext redis)
         {
             _context = context;
+           // _redisDb = redis.GetDatabase();
         }
 
         public async Task<IEnumerable<Note>> GetAllNotes(int userId)
