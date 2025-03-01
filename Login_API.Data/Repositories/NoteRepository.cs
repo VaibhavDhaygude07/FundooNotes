@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace FundooNotes.Data.Repositories
@@ -14,17 +15,32 @@ namespace FundooNotes.Data.Repositories
     public class NoteRepository : INoteRepository
     {
         private readonly UserDbContext _context;
-        private readonly UserDbContext _redisDb;
+        private readonly IDatabase _redisDb;
 
-        public NoteRepository(UserDbContext context, UserDbContext redis)
+        public NoteRepository(UserDbContext context, IConnectionMultiplexer redis)
         {
             _context = context;
-           // _redisDb = redis.GetDatabase();
+            _redisDb = redis.GetDatabase();
         }
 
         public async Task<IEnumerable<Note>> GetAllNotes(int userId)
         {
-            return await _context.Notes.Where(n => n.UserId == userId).ToListAsync();
+            string cacheKey = $"notes:user:{userId}";
+            var cachedNotes = await _redisDb.StringGetAsync(cacheKey);
+
+            if (!cachedNotes.IsNullOrEmpty)
+            {
+                return JsonSerializer.Deserialize<IEnumerable<Note>>(cachedNotes);
+            }
+
+            var notes = await _context.Notes.Where(n => n.UserId == userId).ToListAsync();
+
+            if (notes.Any())
+            {
+                await _redisDb.StringSetAsync(cacheKey, JsonSerializer.Serialize(notes), TimeSpan.FromMinutes(10));
+            }
+
+            return notes;
         }
 
         public async Task<IEnumerable<Note>> GetAllActiveNotes(int userId)
@@ -36,19 +52,49 @@ namespace FundooNotes.Data.Repositories
 
         public async Task<Note> GetNoteById(int noteId, int userId)
         {
-            return await _context.Notes.FirstOrDefaultAsync(n => n.NoteId == noteId && n.UserId == userId);
+            string cacheKey = $"note:{noteId}:user:{userId}";
+            var cachedNote = await _redisDb.StringGetAsync(cacheKey);
+
+            if (!cachedNote.IsNullOrEmpty)
+            {
+                return JsonSerializer.Deserialize<Note>(cachedNote);
+            }
+
+            var note = await _context.Notes.FirstOrDefaultAsync(n => n.NoteId == noteId && n.UserId == userId);
+
+            if (note != null)
+            {
+                await _redisDb.StringSetAsync(cacheKey, JsonSerializer.Serialize(note), TimeSpan.FromMinutes(10));
+            }
+
+            return note;
         }
 
         public async Task<bool> CreateNote(Note note)
         {
             _context.Notes.Add(note);
-            return await _context.SaveChangesAsync() > 0;
+            bool isSaved = await _context.SaveChangesAsync() > 0;
+
+            if (isSaved)
+            {
+                await _redisDb.KeyDeleteAsync($"notes:user:{note.UserId}");
+            }
+
+            return isSaved;
         }
 
         public async Task<bool> UpdateNote(Note note)
         {
             _context.Notes.Update(note);
-            return await _context.SaveChangesAsync() > 0;
+            bool isUpdated = await _context.SaveChangesAsync() > 0;
+
+            if (isUpdated)
+            {
+                await _redisDb.KeyDeleteAsync($"note:{note.NoteId}:user:{note.UserId}");
+                await _redisDb.KeyDeleteAsync($"notes:user:{note.UserId}");
+            }
+
+            return isUpdated;
         }
 
         public async Task<bool> DeleteNote(int noteId, int userId)
@@ -57,14 +103,18 @@ namespace FundooNotes.Data.Repositories
             if (note != null)
             {
                 _context.Notes.Remove(note);
-                return await _context.SaveChangesAsync() > 0;
+                bool isDeleted = await _context.SaveChangesAsync() > 0;
+
+                if (isDeleted)
+                {
+                    await _redisDb.KeyDeleteAsync($"note:{noteId}:user:{userId}");
+                    await _redisDb.KeyDeleteAsync($"notes:user:{userId}");
+                }
+
+                return isDeleted;
             }
             return false;
         }
-
-
-
-
 
         public async Task<bool> ToggleArchive(int noteId, int userId)
         {
@@ -72,7 +122,15 @@ namespace FundooNotes.Data.Repositories
             if (note != null && note.UserId == userId)
             {
                 note.isArchive = !note.isArchive;
-                return await _context.SaveChangesAsync() > 0;  // Return boolean
+                bool isUpdated = await _context.SaveChangesAsync() > 0;
+
+                if (isUpdated)
+                {
+                    await _redisDb.KeyDeleteAsync($"note:{noteId}:user:{userId}");
+                    await _redisDb.KeyDeleteAsync($"notes:user:{userId}");
+                }
+
+                return isUpdated;
             }
             return false;
         }
@@ -83,10 +141,17 @@ namespace FundooNotes.Data.Repositories
             if (note != null && note.UserId == userId)
             {
                 note.IsTrashed = !note.IsTrashed;
-                return await _context.SaveChangesAsync() > 0;  // Return boolean
+                bool isUpdated = await _context.SaveChangesAsync() > 0;
+
+                if (isUpdated)
+                {
+                    await _redisDb.KeyDeleteAsync($"note:{noteId}:user:{userId}");
+                    await _redisDb.KeyDeleteAsync($"notes:user:{userId}");
+                }
+
+                return isUpdated;
             }
             return false;
         }
     }
-
 }
