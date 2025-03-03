@@ -1,5 +1,6 @@
 ﻿using FundooNotes.Business.Interfaces;
 using Microsoft.Extensions.Configuration;
+using System;
 using System.Net;
 using System.Net.Mail;
 using System.Text;
@@ -9,13 +10,12 @@ public class EmailService : IEmailService
 {
     private readonly IConfiguration _configuration;
 
-   
     public EmailService(IConfiguration configuration)
     {
         _configuration = configuration;
     }
 
-    public async Task<bool> SendEmailAsync(string toEmail, string resetLink)
+    public async Task<bool> SendEmailAsync(string toEmail,  string body)
     {
         try
         {
@@ -25,33 +25,20 @@ public class EmailService : IEmailService
             string smtpUser = _configuration["EmailSettings:SmtpUser"];
             string smtpPassword = _configuration["EmailSettings:SmtpPassword"];
 
-            Console.WriteLine($"Attempting to send email to: {toEmail}");
-            Console.WriteLine($"SMTP Server: {smtpServer}");
-            Console.WriteLine($"SMTP Port: {smtpPort}");
-            Console.WriteLine($"From Email: {fromEmail}");
-            Console.WriteLine($"SMTP User: {smtpUser}");
-
-            using (MailMessage mailMessage = new MailMessage(fromEmail, toEmail))
+            using (var mailMessage = new MailMessage(fromEmail, toEmail))
             {
-                mailMessage.Subject = "Password Reset Request";
-                mailMessage.Body = $@"
-            <p>You requested a password reset. Click the link below to reset your password:</p>
-            <p><a href='{resetLink}' target='_blank'>Reset Password</a></p>
-            <p>If you did not request this, please ignore this email.</p>";
+                
+                mailMessage.Body = body;
                 mailMessage.IsBodyHtml = true;
                 mailMessage.BodyEncoding = Encoding.UTF8;
 
-                using (SmtpClient smtpClient = new SmtpClient(smtpServer, smtpPort))
+                using (var smtpClient = new SmtpClient(smtpServer, smtpPort))
                 {
                     smtpClient.EnableSsl = true;
-                    smtpClient.DeliveryMethod = SmtpDeliveryMethod.Network;
                     smtpClient.UseDefaultCredentials = false;
                     smtpClient.Credentials = new NetworkCredential(smtpUser, smtpPassword);
-                    smtpClient.Timeout = 30000; // 30 seconds timeout
-
 
                     await smtpClient.SendMailAsync(mailMessage);
-                    Console.WriteLine("✅ Email sent successfully!");
                     return true;
                 }
             }
@@ -62,6 +49,4 @@ public class EmailService : IEmailService
             return false;
         }
     }
-
 }
-

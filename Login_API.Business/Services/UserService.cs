@@ -29,7 +29,7 @@ namespace Login_API.Business.Services
 
         public async Task<User> Authenticate(string email, string password)
         {
-            var user = await _userRepository.AuthenticateUser(email);
+            var user = await _userRepository.AuthenticateUser( email,  password);
             if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash)) return null;
             return user;
         }

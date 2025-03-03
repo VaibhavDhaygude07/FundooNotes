@@ -43,6 +43,7 @@ builder.Services.AddScoped<INoteService, NoteService>();
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddSingleton<IEmailService, EmailService>();
 
+
 // ✅ Register Label Repository & Service
 builder.Services.AddScoped<ILabelRepository, LabelRepository>();
 builder.Services.AddScoped<ILabelService, LabelService>();

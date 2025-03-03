@@ -11,6 +11,8 @@ namespace Login_API.Data.Repositories
     public interface IUserRepository
     {
         Task<bool> RegisterUser(User user);
-        Task<User> AuthenticateUser(string email);
+        public Task<User> AuthenticateUser(string email, string password);
+
+
     }
 }
