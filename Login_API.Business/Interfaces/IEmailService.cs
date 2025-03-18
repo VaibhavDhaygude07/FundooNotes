@@ -4,6 +4,8 @@ namespace FundooNotes.Business.Interfaces
 {
     public interface IEmailService
     {
-        Task<bool> SendEmailAsync(string toEmail,  string body);
+        Task SendEmailAsync(string to, string body);
+        //Task SendEmailAsync(string email, string resetLink);
     }
+
 }

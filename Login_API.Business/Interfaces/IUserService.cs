@@ -1,5 +1,6 @@
 ﻿using FundooNotes.Data.Entity;
 using Login_API.Data.Models;
+using ModelLayer.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,5 +13,7 @@ namespace Login_API.Business.Interfaces
     {
         Task<bool> RegisterUser(string firstName, string lastName, string email, string password);
         Task<User> Authenticate(string email, string password);
+        Task<string> ForgetPassword(string email);
+        Task<bool> ResetPassword(string email, string token, string newPassword);
     }
 }

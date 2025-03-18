@@ -1,12 +1,13 @@
 ﻿using FundooNotes.API.Controllers;
 using FundooNotes.Business.Interfaces;
+using FundooNotes.Data.Entity;
 using FundooNotes.Data.Models;
 using Login_API.Data.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-using FundooNotes.Data.Entity;
 using StackExchange.Redis;
+using System.Drawing;
+using System.Security.Claims;
 using System.Text.Json;
 
 namespace FundooNotes.API.Controllers
@@ -37,7 +38,8 @@ namespace FundooNotes.API.Controllers
                 return Ok(JsonSerializer.Deserialize<IEnumerable<Note>>(cachedNotes));
             }
 
-            var notes = await _noteService.GetAllActiveNotes(UserId);
+            var notes = await _noteService.GetAllNotes(UserId); // Fetch all notes
+ 
             if (notes.Any())
             {
                 await _redisDb.StringSetAsync(cacheKey, JsonSerializer.Serialize(notes), TimeSpan.FromMinutes(10));
@@ -71,8 +73,9 @@ namespace FundooNotes.API.Controllers
         {
             Note note = new Note
             {
-                Title = model.Title,
-                Content = model.Content,
+                Title = model.title,
+                Content = model.content,
+                Color = model.Color,
                 UpdatedAt = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow,
                 UserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier))
@@ -88,16 +91,43 @@ namespace FundooNotes.API.Controllers
             return BadRequest("Failed to create note");
         }
 
+        //[HttpPut("{noteId}")]
+        //public async Task<IActionResult> UpdateNote(int noteId, [FromBody] NoteModel model)
+        //{
+        //    int UserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        //    Note existingNote = await _noteService.GetNoteById(noteId, UserId);
+
+        //    if (existingNote == null) return NotFound("Note not found");
+
+        //    existingNote.Title = model.title;
+        //    existingNote.Content = model.content;
+        //    existingNote.Color = model.Color;
+        //    existingNote.UpdatedAt = DateTime.UtcNow;
+
+        //    var result = await _noteService.UpdateNote(existingNote);
+        //    if (result)
+        //    {
+        //        await _redisDb.KeyDeleteAsync($"note:{noteId}:user:{UserId}");
+        //        await _redisDb.KeyDeleteAsync($"notes:user:{UserId}");
+        //        return Ok("Note updated successfully!");
+        //    }
+
+        //    return BadRequest("Failed to update note");
+        //}
+
+
         [HttpPut("{noteId}")]
         public async Task<IActionResult> UpdateNote(int noteId, [FromBody] NoteModel model)
         {
             int UserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             Note existingNote = await _noteService.GetNoteById(noteId, UserId);
 
-            if (existingNote == null) return NotFound("Note not found");
+            if (existingNote == null)
+                return NotFound(new { message = "Note not found" });
 
-            existingNote.Title = model.Title;
-            existingNote.Content = model.Content;
+            existingNote.Title = model.title;
+            existingNote.Content = model.content;
+            existingNote.Color = model.Color;
             existingNote.UpdatedAt = DateTime.UtcNow;
 
             var result = await _noteService.UpdateNote(existingNote);
@@ -105,27 +135,50 @@ namespace FundooNotes.API.Controllers
             {
                 await _redisDb.KeyDeleteAsync($"note:{noteId}:user:{UserId}");
                 await _redisDb.KeyDeleteAsync($"notes:user:{UserId}");
-                return Ok("Note updated successfully!");
+
+                // ✅ Return the updated note instead of just a success message
+                return Ok(new
+                {
+                    message = "Note updated successfully!",
+                    updatedNote = existingNote
+                });
             }
 
-            return BadRequest("Failed to update note");
+            return BadRequest(new { message = "Failed to update note" });
         }
+
+
+
 
         [HttpDelete("{noteId}")]
         public async Task<IActionResult> DeleteNote(int noteId)
         {
-            var UserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var result = await _noteService.DeleteNote(noteId, UserId);
-
-            if (result)
+            try
             {
+                if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out int UserId))
+                {
+                    return Unauthorized("User is not authorized");
+                }
+
+                var result = await _noteService.DeleteNote(noteId, UserId);
+
+                if (!result)
+                {
+                    return NotFound("Note not found or already deleted");
+                }
+
+                // Remove cache entries
                 await _redisDb.KeyDeleteAsync($"note:{noteId}:user:{UserId}");
                 await _redisDb.KeyDeleteAsync($"notes:user:{UserId}");
+
                 return Ok("Note deleted successfully!");
             }
-
-            return BadRequest("Failed to delete note");
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred: {ex.Message}");
+            }
         }
+
 
         [HttpPut("{noteId}/Archive")]
         public async Task<IActionResult> ToggleArchive(int noteId)
@@ -151,7 +204,7 @@ namespace FundooNotes.API.Controllers
         [HttpPut("{noteId}/Trash")]
         public async Task<IActionResult> ToggleNoteTrash(int noteId)
         {
-            var UserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var UserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)); 
             var note = await _noteService.GetNoteById(noteId, UserId);
 
             if (note == null) return NotFound("Note not found");

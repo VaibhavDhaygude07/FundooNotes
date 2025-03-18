@@ -1,9 +1,8 @@
 ﻿using FundooNotes.Business.Interfaces;
+using MailKit.Net.Smtp;
+using MailKit.Security;
 using Microsoft.Extensions.Configuration;
-using System;
-using System.Net;
-using System.Net.Mail;
-using System.Text;
+using MimeKit;
 using System.Threading.Tasks;
 
 public class EmailService : IEmailService
@@ -15,38 +14,18 @@ public class EmailService : IEmailService
         _configuration = configuration;
     }
 
-    public async Task<bool> SendEmailAsync(string toEmail,  string body)
+    public async Task SendEmailAsync(string to, string body)
     {
-        try
-        {
-            string fromEmail = _configuration["EmailSettings:FromEmail"];
-            string smtpServer = _configuration["EmailSettings:SmtpServer"];
-            int smtpPort = int.Parse(_configuration["EmailSettings:SmtpPort"]);
-            string smtpUser = _configuration["EmailSettings:SmtpUser"];
-            string smtpPassword = _configuration["EmailSettings:SmtpPassword"];
+        var email = new MimeMessage();
+        email.From.Add(new MailboxAddress("Your Name", "vdhaygude2002@gmail.com"));
+        email.To.Add(MailboxAddress.Parse(to));
+        email.Subject = "Password Reset";
+        email.Body = new TextPart("plain") { Text = body };
 
-            using (var mailMessage = new MailMessage(fromEmail, toEmail))
-            {
-                
-                mailMessage.Body = body;
-                mailMessage.IsBodyHtml = true;
-                mailMessage.BodyEncoding = Encoding.UTF8;
-
-                using (var smtpClient = new SmtpClient(smtpServer, smtpPort))
-                {
-                    smtpClient.EnableSsl = true;
-                    smtpClient.UseDefaultCredentials = false;
-                    smtpClient.Credentials = new NetworkCredential(smtpUser, smtpPassword);
-
-                    await smtpClient.SendMailAsync(mailMessage);
-                    return true;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"❌ Email sending failed: {ex.Message}");
-            return false;
-        }
+        using var smtp = new SmtpClient();
+        await smtp.ConnectAsync("smtp.gmail.com", 587, SecureSocketOptions.StartTls);
+        await smtp.AuthenticateAsync("vdhaygude2002@gmail.com", "tloe whhq vwpf awdw"); // Use App Password
+        await smtp.SendAsync(email);
+        await smtp.DisconnectAsync(true);
     }
 }

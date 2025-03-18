@@ -1,4 +1,5 @@
-﻿using FundooNotes.Business.Interfaces;
+﻿using BusinessLayer.Services;
+using FundooNotes.Business.Interfaces;
 using FundooNotes.Business.Services;
 using FundooNotes.Data.Repositories;
 using Login_API.Business;
@@ -11,10 +12,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using RepositoryLayer.Services;
 using StackExchange.Redis;
 using System.Net;
 using System.Net.Mail;
 using System.Text;
+
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,9 +35,19 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Conn
 
 var key = Encoding.UTF8.GetBytes(jwtKey);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        builder => builder.AllowAnyOrigin()
+                          .AllowAnyMethod()
+                          .AllowAnyHeader());
+});
+
 // 🔹 Configure Database Connection
 builder.Services.AddDbContext<UserDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.Configure<EmailService>(builder.Configuration.GetSection("EmailSettings")); 
 
 // 🔹 Add Dependency Injection for Repositories & Services
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -41,7 +55,13 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<INoteRepository, NoteRepository>();
 builder.Services.AddScoped<INoteService, NoteService>();
 builder.Services.AddScoped<JwtTokenService>();
-builder.Services.AddSingleton<IEmailService, EmailService>();
+
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+
+
+
+//builder.Services.AddTransient<IEmailService, EmailService>();
 
 
 // ✅ Register Label Repository & Service
@@ -81,6 +101,15 @@ builder.Services.AddAuthorization();
 
 // 🔹 Add Controllers
 builder.Services.AddControllers();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyHeader()
+               .AllowAnyMethod();
+    });
+});
 
 // 🔹 Configure Swagger with JWT Authentication
 builder.Services.AddEndpointsApiExplorer();
@@ -113,7 +142,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
-
+app.UseCors("AllowAll");
 app.UseSwagger();
 app.UseSwaggerUI();
 

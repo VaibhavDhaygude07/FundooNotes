@@ -64,27 +64,7 @@ namespace LoginAPI.API.Controllers
             return Ok(new { Token = token });
         }
 
-        //[HttpPost("ForgotPassword")]
-        //public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
-        //{
-        //    var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-        //    if (user == null)
-        //        return NotFound("User not found");
-
-        //    // Generate Reset Token
-        //    user.ResetToken = _jwtTokenService.GenerateToken(user.Id, user.Email);
-        //    user.ResetTokenExpiry = DateTime.UtcNow.AddHours(1); // Token valid for 1 hour
-        //    await _context.SaveChangesAsync();
-
-        //    // Create Reset Password Link
-        //    var resetLink = $"https://yourdomain.com/reset-password?token={user.ResetToken}";
-
-        //    // Send Email with Reset Link
-        //    await _emailService.SendEmailAsync(user.Email, resetLink);
-
-
-        //    return Ok(new { Message = "Password reset link sent successfully" });
-        //}
+      
 
         [HttpPost("ForgotPassword")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
@@ -105,16 +85,21 @@ namespace LoginAPI.API.Controllers
             Console.WriteLine($"Reset Link: {resetLink}");
 
             // Send Email with Reset Link
-            var emailResult = await _emailService.SendEmailAsync(user.Email, resetLink);
-            Console.WriteLine($"Email sent result: {emailResult}");
+            await _emailService.SendEmailAsync(user.Email, resetLink);
+            Console.WriteLine("Email sent successfully.");
 
             return Ok(new { Message = "Password reset link sent successfully" });
         }
 
 
         [HttpPost("ResetPassword")]
-        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        public async Task<IActionResult> ResetPassword(ResetPasswordRequest request) // Removed [FromBody]
         {
+            if (request == null || string.IsNullOrEmpty(request.Token) || string.IsNullOrEmpty(request.NewPassword))
+            {
+                return BadRequest("Invalid request");
+            }
+
             var user = await _context.Users.FirstOrDefaultAsync(u => u.ResetToken == request.Token && u.ResetTokenExpiry > DateTime.UtcNow);
             if (user == null)
                 return BadRequest("Invalid or expired token");
@@ -130,6 +115,7 @@ namespace LoginAPI.API.Controllers
             return Ok(new { Message = "Password has been reset successfully" });
         }
 
-       
+
+
     }
 }

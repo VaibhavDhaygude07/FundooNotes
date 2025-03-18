@@ -12,10 +12,13 @@ namespace FundooNotes.Data.Models
 
         [Required]
         [MaxLength(200)]
-        public string Title { get; set; }
+        public string title { get; set; }
 
         [Required]
-        public string Content { get; set; }
+        public string content { get; set; }
+
+        public string Color { get; set; }
+
 
 
     }
